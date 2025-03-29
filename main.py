@@ -8,10 +8,10 @@ def main() -> None:
     match EnvLoader.get("DISCORD_TOKEN"):
         case Option.Some(value):
             DISCORD_TOKEN = value
-            Debug.log("Succesfully acquired discord token")
+            Debug.log("Succesfully acquired Discord token")
         case Option.Empty():
-            Debug.log("Failed to acquire discord token")
-            exit(1)
+            Debug.log("Failed to acquire Discord token")
+            return
 
     COMMAND_PREFIX = "sudo "
     BOT_DESCRIPTION = "this description of mine"
