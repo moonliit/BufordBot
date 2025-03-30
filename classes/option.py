@@ -2,13 +2,14 @@ from __future__ import annotations
 from classes.enum import Enum, enum_base, enum_variant
 from classes.generic import Generic, T, U, E
 from utility.debug import Debug
-from typing import Callable, TYPE_CHECKING
+from typing import Callable, Type, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from classes.result import Result
 
-# Rust-like Option<T>
 class Option(Generic[T], Enum):
+    """Rust-like Option Enum. Contains variants 'Some' and 'Empty'"""
+
     @enum_base
     class OptionOpt(Enum.EnumOpt, Generic[T]):
         """Base class for Option variants, providing common methods."""
@@ -34,20 +35,39 @@ class Option(Generic[T], Enum):
         def unwrap_or_else(self, fn: Callable[[], T]) -> T:
             """Returns the contained value if `Some`, otherwise computes a default value using `fn`."""
             return self.value if isinstance(self, Option.Some) else fn()
+        
+        def unwrap_or_err(self, msg: str) -> T:
+            """Returns the contained value if `Some`, otherwise panics thread with given `msg`"""
+            from utility.debug import Debug  # Lazy import to avoid circular dependency
+            if isinstance(self, Option.Some):
+                return self.value
+            Debug.panic(msg)
 
-        def map(self, fn: Callable[[T], U]) -> Option[U]:
-            """Applies a function `fn` to the contained value (if `Some`), returning a new `Option`."""
-            return Option.Some(fn(self.value)) if isinstance(self, Option.Some) else Option.Empty()
+        def map(self, return_type: Type[U]):
+            """
+            Transforms `Some(T)` into `Some(U)` using `fn: T -> U`, returning `Option[U]`. Returns `Empty` otherwise.
+            
+            ### Uses curried template args `[U]` 
+            """
+            def inner(fn: Callable[[T], U]) -> Option[U].OptionOpt:
+                return Option.Some(return_type(fn(self.value))) if isinstance(self, Option.Some) else Option.Empty()
+            return inner
+        
+        def and_then(self, return_type: Type[U]):
+            """
+            Transforms `Some(T)` into `Option[U]` using `fn: T -> Option[U]`, avoiding nested `Option[Option[U]]`. Returns `Empty` otherwise.
+            
+            ### Uses curried template args `[U]` 
+            """
+            def inner(fn: Callable[[T], Option[U]]) -> Option[U].OptionOpt:
+                return fn(self.value) if isinstance(self, Option.Some) else Option.Empty()
+            return inner
 
-        def and_then(self, fn: Callable[[T], Option[U]]) -> Option[U]:
-            """Calls `fn` if `Some`, returning the result, otherwise returns `Empty`."""
-            return fn(self.value) if isinstance(self, Option.Some) else Option.Empty()
-
-        def filter(self, predicate: Callable[[T], bool]) -> Option[T]:
+        def filter(self, predicate: Callable[[T], bool]) -> Option[T].OptionOpt:
             """Returns `Some(value)` if the predicate returns `True`, otherwise `Empty`."""
             return self if isinstance(self, Option.Some) and predicate(self.value) else Option.Empty()
 
-        def ok_or(self, err: E) -> "Result[T, E]":
+        def ok_or(self, err: E) -> "Result[T, E].ResultOpt":
             """Converts `Option<T>` into `Result<T, E>`, using `Err(err)` if `Empty`."""
             from classes.result import Result  # Lazy import to avoid circular dependency
             return Result.Ok(self.value) if isinstance(self, Option.Some) else Result.Err(err)

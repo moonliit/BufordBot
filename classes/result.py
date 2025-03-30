@@ -1,14 +1,15 @@
 from __future__ import annotations
 from classes.enum import Enum, enum_base, enum_variant
-from classes.generic import Generic, T, E, _
+from classes.generic import Generic, T, U, E, F, _
 from utility.debug import Debug
-from typing import Callable, TYPE_CHECKING
+from typing import Callable, Type, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from classes.option import Option
 
-# Rust-like Result<T, E>
 class Result(Generic[T, E], Enum):
+    """Rust-like Result Enum. Contains variants 'Ok' and 'Err'"""
+
     @enum_base
     class ResultOpt(Enum.EnumOpt, Generic[T, E]):
         """Base class for Result variants, providing common methods."""
@@ -57,21 +58,47 @@ class Result(Generic[T, E], Enum):
             from classes.option import Option
             return Option.Some(self.error) if isinstance(self, Result.Err) else Option.Empty()
 
-        def map(self, fn: Callable[[T], U]) -> Result[U, E]:
-            """Applies a function to the Ok value (if present), keeping Err unchanged."""
-            return Result.Ok(fn(self.value)) if isinstance(self, Result.Ok) else self
+        def map(self, return_type: Type[U]):
+            """
+            Transforms `Ok(T)` into `Ok(U)` using `fn: T -> U`, returning `Result[U, E]`. Keeps `Err` unchanged.
 
-        def map_err(self, fn: Callable[[E], F]) -> Result[T, F]:
-            """Applies a function to the Err value (if present), keeping Ok unchanged."""
-            return Result.Err(fn(self.error)) if isinstance(self, Result.Err) else self
+            ### Uses curried template args `[U]`
+            """
+            def inner(fn: Callable[[T], U]) -> Result[U, E]:
+                return Result.Ok(return_type(fn(self.value))) if isinstance(self, Result.Ok) else self
+            return inner
 
-        def and_then(self, fn: Callable[[T], Result[U, E]]) -> Result[U, E]:
-            """Chains a function that returns a Result if this is Ok; propagates Err."""
-            return fn(self.value) if isinstance(self, Result.Ok) else self
+        def map_err(self, return_type: Type[F]):
+            """
+            Transforms `Err(E)` into `Err(F)` using `fn: E -> F`, returning `Result[T, F]`. Keeps `Ok` unchanged.
 
-        def or_else(self, fn: Callable[[E], Result[T, F]]) -> Result[T, F]:
-            """Chains a function that returns a Result if this is Err; propagates Ok."""
-            return fn(self.error) if isinstance(self, Result.Err) else self
+            ### Uses curried template args `[F]`
+            """
+            def inner(fn: Callable[[E], F]) -> Result[T, F]:
+                return Result.Err(return_type(fn(self.error))) if isinstance(self, Result.Err) else self
+            return inner
+
+        def and_then(self, return_type: Type[U]):
+            """
+            Transforms `Ok(T)` into `Result[U, E]` using `fn: T -> Result[U, E]`, avoiding nested `Result[Result[U, E], E]`. 
+            Keeps `Err` unchanged.
+
+            ### Uses curried template args `[U]`
+            """
+            def inner(fn: Callable[[T], Result[U, E]]) -> Result[U, E]:
+                return fn(self.value) if isinstance(self, Result.Ok) else self
+            return inner
+
+        def or_else(self, return_type: Type[F]):
+            """
+            Transforms `Err(E)` into `Result[T, F]` using `fn: E -> Result[T, F]`, avoiding nested `Result[T, Result[T, F]]`. 
+            Keeps `Ok` unchanged.
+
+            ### Uses curried template args `[F]`
+            """
+            def inner(fn: Callable[[E], Result[T, F]]) -> Result[T, F]:
+                return fn(self.error) if isinstance(self, Result.Err) else self
+            return inner
 
     @enum_variant
     class Ok(ResultOpt[T, _], Generic[T, _]):

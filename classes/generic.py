@@ -8,6 +8,7 @@ U = TypeVar("U")
 
 # Error generics
 E = TypeVar("E", bound=Error)
+F = TypeVar("F", bound=Error)
 
 # Empty generics
 _ = TypeVar("_", bound=NoneType)
