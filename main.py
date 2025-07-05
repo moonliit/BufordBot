@@ -4,7 +4,7 @@ from utility.env_loader import EnvLoader
 
 def main() -> None:
     DISCORD_TOKEN = EnvLoader.get("DISCORD_TOKEN").unwrap_or_err("Failed to acquire Discord token")
-    COMMAND_PREFIX = "sudo "
+    COMMAND_PREFIX = "!"
     BOT_DESCRIPTION = "this description of mine" #placeholder
     BOT_INTENTS = Intents.all()
 

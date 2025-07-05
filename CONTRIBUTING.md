@@ -1,5 +1,3 @@
-(escrito por gpt XD)
-
 # Contributing to the Bot
 
 Thank you for considering contributing to this project! This guide will walk you through the process of adding new features via cogs.
