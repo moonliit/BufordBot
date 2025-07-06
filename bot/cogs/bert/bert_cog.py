@@ -1,12 +1,11 @@
 from bot.cogs.base_cog import BaseCog, commands
 
-from transformers import DistilBertForSequenceClassification, DistilBertTokenizerFast
+from transformers import AutoModelForSequenceClassification, AutoTokenizer
 from pathlib import Path
 import torch
 
-PREFIX_PATH = Path("bot/cogs/bert_cog/")
+PREFIX_PATH = Path("bot/cogs/bert")
 MODEL_PATH = PREFIX_PATH / "saved_model"
-LABEL_ENCODER_PATH = PREFIX_PATH / "label_encoder.pkl"
 TORCH_DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class BertCog(BaseCog):
@@ -18,9 +17,9 @@ class BertCog(BaseCog):
         """Initializes the BertCog."""
 
         # Cargar modelo y tokenizer
-        self.model = DistilBertForSequenceClassification.from_pretrained(MODEL_PATH)
-        self.tokenizer = DistilBertTokenizerFast.from_pretrained(MODEL_PATH)
-
+        self.model = AutoModelForSequenceClassification.from_pretrained(MODEL_PATH)
+        self.tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH)
+        
         # Enviar el modelo a GPU si está disponible
         self.model.to(TORCH_DEVICE)
         self.model.eval()
@@ -47,15 +46,21 @@ class BertCog(BaseCog):
             await self.bot.process_commands(message)
             return
 
-        label, confidence = self._predict(msg_str)
-        
-        if label == "not_cyberbullying":
+        confidences = self._predict(msg_str)
+
+        # if chance of it NOT being cyberbullying is higher than 50%, skip
+        SOFT_MARGIN = 0.5
+        if confidences["not_cyberbullying"] >= SOFT_MARGIN:
             return
         
+        confidences.pop("not_cyberbullying", None)
+        top_label = max(confidences, key=confidences.get)
+        top_confidence = confidences[top_label]
+
         warn_msg = ""
         warn_msg += f"\nTexto: {msg_str}\n"
-        warn_msg += f"Predicción: {label}\n"
-        warn_msg += f"Confianza: {confidence}\n"
+        warn_msg += f"Predicción: {top_label}\n"
+        warn_msg += f"Confianza: {top_confidence}\n"
         await message.reply(warn_msg)
     
     def _predict(self, text: str):
@@ -63,8 +68,12 @@ class BertCog(BaseCog):
 
         with torch.no_grad():
             outputs = self.model(**inputs)
-            predictions = torch.nn.functional.softmax(outputs.logits, dim=-1)
-            predicted_class = torch.argmax(predictions, dim=-1).item()
-            confidence = predictions[0][predicted_class].item()
+            predictions = torch.nn.functional.softmax(outputs.logits, dim=-1)[0]  # Get first (and only) batch
 
-        return self.label_mapping[predicted_class], confidence
+        # Map each class index to label and confidence
+        confidences = {
+            self.label_mapping[i]: predictions[i].item()
+            for i in range(len(predictions))
+        }
+
+        return confidences
