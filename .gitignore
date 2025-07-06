@@ -19,5 +19,5 @@ ENV/
 env.bak/
 venv.bak/
 
-# ignore save model
-**/saved_model/
+# ignore model features
+**/bert/features/**

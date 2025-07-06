@@ -6,13 +6,13 @@ import asyncio
 from bot.cogs.base_cog import BaseCog
 from bot.cogs.presence.presence_cog import PresenceCog
 from bot.cogs.help.help_cog import HelpCog
-from bot.cogs.bert.bert_cog import BertCog
+from bot.cogs.prediction.prediction_cog import PredictionCog
 
 # List of cogs to be loaded into the bot
 cog_array: List[Type[BaseCog]] = [
     PresenceCog,
     HelpCog,
-    BertCog
+    PredictionCog
 ]
 
 class MainBot(commands.Bot):
