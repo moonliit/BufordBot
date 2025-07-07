@@ -10,12 +10,15 @@ class HelpCog(BaseCog):
 
     def __init__(self):
         """Initializes the HelpCog."""
-        self.msg = "help"
+        self.msg = """**AYUDA - BUFORD BOT:**
+- !prediction debug (on/off): Activa/Desactiva el modo debug. Para ver resultados clasificados como not_cyberbullying.
+- !prediction model (bert/tf_idf): Cambia el modelo a 'bert' o a 'tf_idf' respectivamente.
+"""
 
     @commands.command()
     async def help(self, ctx: commands.Context):
         """
-        Replies with a placeholder help message when the command is used.
+        Replies with a help message when the command is used.
 
         Args:
             ctx (commands.Context): The command invocation context.

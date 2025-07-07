@@ -1,5 +1,5 @@
 from bot.cogs.base_cog import BaseCog, commands
-from discord import Game
+from discord import Game, Status
 
 class PresenceCog(BaseCog):
     """
@@ -11,9 +11,12 @@ class PresenceCog(BaseCog):
 
     def __init__(self):
         """Initializes the PresenceCog."""
-        self.status_message: str = "sudo help"
+        self.status_message: str = "!help"
 
     @commands.Cog.listener()
     async def on_ready(self):
         """Event listener that updates the bot's presence when it is ready."""
-        await self.bot.change_presence(activity=Game(name=self.status_message))
+        await self.bot.change_presence(
+            status=Status.dnd,
+            activity=Game(name=self.status_message)
+        )
